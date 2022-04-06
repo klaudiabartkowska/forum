@@ -1,5 +1,6 @@
 package main
 
+<<<<<<< HEAD
 import (
 	"net/http"
 	"text/template"
@@ -36,3 +37,12 @@ func main() {
 
 	http.HandleFunc("/", handler)
 	http.ListenAndServe(":8080", nil)
+=======
+import "fmt"
+
+func main() {
+
+	fmt.Println("hi")
+
+}
+>>>>>>> 154ba34c301d966a809fd248eec2812c841db5b9
