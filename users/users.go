@@ -1,10 +1,10 @@
-package users
+// package users
 
 
-type User struct {
+// type User struct {
 
-Email string 
-Password string 
-Username string
+// Email string 
+// Password string 
+// Username string
 
-}
+// }
