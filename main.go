@@ -1,10 +1,13 @@
 package main
 
 import (
+	//"database/sql"
 	"fmt"
 	"net/http"
+	"strings"
 	"text/template"
-	
+	"unicode"
+	//"github.com/mattn/go-sqlite3"
 )
 
 //The "db" package level variable will hold the reference to our database instanc
@@ -18,43 +21,109 @@ type User struct {
 	email    string
 }
 
+
 func init() {
 	tpl = template.Must(template.ParseGlob("templates/*"))
 }
 
+// getLoginPage serves form for log in existing users  
+
 func getLoginPage(w http.ResponseWriter, r *http.Request) {
 
-	fmt.Println("login page running")
+	fmt.Println("*****loginpage running****")
 
 	tpl.ExecuteTemplate(w, "login.html", nil)
 
 }
 
-func getSignUpPage(w http.ResponseWriter, r *http.Request) {
+// getSingUpPage serves form for signing up new users 
 
+func getSignUpPage(w http.ResponseWriter, r *http.Request) {
+   fmt.Println("***sign-up page runnning***")
 	tpl.ExecuteTemplate(w, "sign-up.html", nil)
 
 }
 
 func signUpUser(w http.ResponseWriter, r *http.Request) {
 
+	fmt.Println("****Sing-up new user is running " )
+
+	r.ParseForm()
+
+	email := r.FormValue("email")
+
+
+	isValidEmail := strings.Contains(email,"@")
+
+	if isValidEmail {
+		fmt.Println("is valid")
+		
+	}else {
+		fmt.Println("invalid Emial")
+		tpl.ExecuteTemplate(w, "sign-up.html", nil)
+		return
+	}
+	
+	username := r.FormValue("username")
+
+
+// check user for only alphaNumeric characters 
+
+  var nameAlphaNumeric  = true 
+
+  for _, char := range username {
+	  if unicode.IsLetter(char) == false && unicode.IsNumber(char) == false {
+		  nameAlphaNumeric = false 
+	  }
+  
+	}
+	fmt.Print(nameAlphaNumeric)
+
+	var isValidLenght bool  
+	
+	if len(username) <= 5 && len(username) >= 8 {
+		isValidLenght = true 
+	} 
+
+fmt.Println(isValidLenght)
+	password := r.FormValue("password")
+	
+	
+	
+	fmt.Println("email:", email)
+	fmt.Println("username:", username)
+	fmt.Println("password:", password)
+	
+
+
 }
+
+
 
 func loginUser(w http.ResponseWriter, r *http.Request) {
 
-	fmt.Println("login user is running now")
+	fmt.Println("*****loginuser is running********")
 
 	r.ParseForm()
 
 	username := r.FormValue("username")
+
+	if len(username) < 8 {
+		fmt.Println("Username is too short")
+		tpl.ExecuteTemplate(w, "login.html", nil)
+		return 
+	}
+
+
 	password := r.FormValue("password")
 
 	fmt.Println("username:", username)
 	fmt.Println("password:", password)
 
-	tpl.ExecuteTemplate(w, "login.html", nil)
 
 }
+
+
 
 func homePage(w http.ResponseWriter, r *http.Request) {
 
@@ -94,9 +163,14 @@ func handler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-
+	
 	http.HandleFunc("/", handler)
 	fmt.Println("Starting the server on :8080...")
-
 	http.ListenAndServe(":8080", nil)
+
+
+
+
+
+
 }
