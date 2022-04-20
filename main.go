@@ -70,15 +70,6 @@ func signUpUser(w http.ResponseWriter, r *http.Request) {
 		isValidEmail = false
 	}
 
-	// fmt.Println(isValidEmail)
-
-	//fmt.Println("is valid")
-
-	// if isValidEmail == false
-	// 	//fmt.Println("invalid Email")
-	// 	tpl.ExecuteTemplate(w, "sign-up.html", nil)
-	// 	return
-	// }
 	/********************************** USERNAME ******************************/
 
 	username := r.FormValue("username") // grab the username (it's a string/ slice of bytes )
@@ -96,15 +87,11 @@ func signUpUser(w http.ResponseWriter, r *http.Request) {
 
 	}
 
-	//	fmt.Println(isAlphaNumeric)
-
 	var nameLength bool
 
 	if 5 <= len(username) && len(username) <= 50 {
 		nameLength = true
 	}
-
-	//fmt.Println(nameLenght)
 
 	/***************************************** PASSWORD ***********************************/
 
@@ -194,11 +181,6 @@ func getUser(w http.ResponseWriter, r *http.Request) {
 	u.password = r.FormValue("password")
 	u.email = r.FormValue("email")
 
-	// return User {
-	// 	email: u.email,
-	// 	password: u.password,
-	// }
-
 	tpl.ExecuteTemplate(w, "login.html", nil)
 }
 
@@ -214,8 +196,6 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		signUpUser(w, r)
 	case "/homepage.html":
 		homePage(w, r)
-	case "/goback.html":
-		signUpUser(w, r)
 	}
 }
 
