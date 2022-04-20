@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 
-	_ "github.com/mattn/go-sqlite3"
+	_ "github.com/mattn/go-sqlite3" // sqlite3 driver connects go with sql  
 )
 
 func main() {
@@ -15,6 +15,9 @@ func main() {
 	if err != nil {
 		fmt.Println(err.Error())
 	}
+	
+	// 
+
 	statement, _ := db.Prepare("CREATE TABLE IF NOT EXISTS people(id INTEGER PRIMARY KEY, username TEXT, email TEXT, password TEXT)")
 	statement.Exec()
 
