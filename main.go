@@ -8,12 +8,15 @@ import (
 	"text/template"
 	"unicode"
 
+	"example.com/m/database"
 	_ "github.com/mattn/go-sqlite3"
-	//"golang.org/x/crypto/bcrypt"
+	"golang.org/x/crypto/bcrypt"
 )
 
 //The "db" package level variable will hold the reference to our database instanc
-var db *sql.DB
+///var DB *sql.DB
+
+//var insertStmt *sql.Stmt
 
 var tpl *template.Template // create a container that's  points to the template adress
 
@@ -134,14 +137,58 @@ func signUpUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// db, err := sql.Open("sqlite3", "userdata.db")
-	// if err != nil {
-	// 	fmt.Println(err.Error())
+	stmt := "SELECT id FROM people where username = ?"
+	row := database.DB.QueryRow(stmt, username)
 
-	// }
-		fmt.Fprint(w, "congrats, your account has been successfully created")
+	var id string
+	err := row.Scan(&id)
+	if err != sql.ErrNoRows {
+		fmt.Println("username already exists. err", err)
+		tpl.ExecuteTemplate(w, "sign-up.html", "username already taken")
+		return
 	}
 
+	// create hash from password
+	var passwordHash []byte
+
+	// func GenerateFromPassword(password []byte, cost int)([]byte, error)
+
+	passwordHash, err = bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		fmt.Println("bcrypt err:", err)
+		tpl.ExecuteTemplate(w, "sign-up.html", "there is a problem registering account")
+		return
+	}
+
+	var insertStmt *sql.Stmt
+	insertStmt, err = database.DB.Prepare("INSERT INTO people (username, email, passwordHash) VALUES (?, ?, ?);")
+	if err != nil {
+		fmt.Println("error preparing statement:", err)
+		tpl.ExecuteTemplate(w, "sign-up.html", "there was a problem registering account")
+		return
+	}
+	defer insertStmt.Close()
+
+
+	var result sql.Result
+	result, err = insertStmt.Exec(username, email, passwordHash)
+	rowsAff, _ := result.RowsAffected()
+	lastIns, _ := result.LastInsertId()
+	fmt.Println("rowsAff:", rowsAff)
+	fmt.Println("lastIns:", lastIns)
+	fmt.Println("err:", err)
+	if err != nil {
+		fmt.Println("error inserting new user")
+		tpl.ExecuteTemplate(w, "sing-up.html", "there was a problem registering account")
+		return 
+	}
+
+	fmt.Println("hash:", passwordHash)
+	fmt.Println("string(hash)", string(passwordHash))
+
+	fmt.Fprint(w, "congrats, your account has been successfully created")
+
+}
 
 // fmt.Println("email:", email)
 // fmt.Println("username:", username)
@@ -200,16 +247,11 @@ func handler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-
-	var err error
-	db, err = sql.Open("sqlite3", "userdata.db")
-	if err != nil {
-		panic(err.Error())
-	}
-	defer db.Close()
-
-	http.HandleFunc("/", handler)
+	database.Connect()
+   http.HandleFunc("/", handler)
 	fmt.Println("Starting the server on :8080...")
-	http.ListenAndServe(":8080", nil)
-
+	err := http.ListenAndServe(":8080", nil)
+	if err != nil {
+      panic(err)
+    }
 }
