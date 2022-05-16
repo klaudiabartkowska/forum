@@ -3,10 +3,12 @@ package main
 import (
 	"database/sql"
 	"fmt"
+
 	"net/http"
 	"strings"
 	"text/template"
 	"unicode"
+	"github.com/satori/go.uuid"
 
 	"example.com/m/database"
 	_ "github.com/mattn/go-sqlite3"
@@ -21,14 +23,16 @@ import (
 var tpl *template.Template // create a container that's  points to the template adress
 
 type User struct {
-	username string
-	password string
-	email    string
+	Username string
+	Password string
+	Email    string
 }
+
 
 func init() {
 	tpl = template.Must(template.ParseGlob("templates/*"))
 }
+
 
 // getLoginPage serves form for log in existing users
 
@@ -37,6 +41,8 @@ func getLoginPage(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("*****loginpage running****")
 
 	tpl.ExecuteTemplate(w, "login.html", nil)
+	// t := parseTemplateFiles("login")
+	// t.Execute(w,nil)
 
 }
 
@@ -51,36 +57,39 @@ func getSignUpPage(w http.ResponseWriter, r *http.Request) {
 func signUpUser(w http.ResponseWriter, r *http.Request) {
 
 	/*  1. chceck e-mail criteria
-	    2. check username criteria
+	    2. check u.username criteria
 		 3. check password criteria
-		 4. check if username is already exists in database
+		 4. check if u.username is already exists in database
 		 5. create bcrypt hash from password
-		 6. insert username and password hash in database
+		 6. insert u.username and password hash in database
 	*/
 
 	fmt.Println("****Sign-up new user is running ")
+
+	var u User
+   
 
 	r.ParseForm() // parse the sign-up form
 
 	/************************************ EMAIL ************************************/
 
-	email := r.FormValue("email") // grab the email
+	u.Email = r.FormValue("email") // grab the email
 
 	var isValidEmail = true
 
-	if isValidEmail != strings.Contains(email, "@") {
+	if isValidEmail != strings.Contains(u.Email, "@") {
 
 		isValidEmail = false
 	}
 
 	/********************************** USERNAME ******************************/
 
-	username := r.FormValue("username") // grab the username (it's a string/ slice of bytes )
+	u.Username = r.FormValue("username") // grab the u.username (it's a string/ slice of bytes )
 
 	// check user for only alphaNumeric characters
 	var isAlphaNumeric = true
 
-	for _, char := range username {
+	for _, char := range u.Username {
 		// func IsLetter(r rune) bool, func IsNumber(r rune) bool
 		// if !unicode.IsLetter(char) && if !unicode.IsNumber {              // checking if the char in username are letters and numbers
 		if unicode.IsLetter(char) == false && unicode.IsNumber(char) == false {
@@ -92,21 +101,21 @@ func signUpUser(w http.ResponseWriter, r *http.Request) {
 
 	var nameLength bool
 
-	if 5 <= len(username) && len(username) <= 50 {
+	if 5 <= len(u.Username) && len(u.Username) <= 50 {
 		nameLength = true
 	}
 
 	/***************************************** PASSWORD ***********************************/
 
 	// check password criteria
-	password := r.FormValue("password")
+	u.Password = r.FormValue("password")
 	//fmt.Println("password:", password, "\n pswdLenght:", len(password))
 
 	// variables that must pass for password creation criteria
 	var pswdLowercase, pswdUppercase, pswdNumber, pswdSpecial, pswdNoSpaces, pswdLength bool
 	pswdNoSpaces = true
 
-	for _, char := range password {
+	for _, char := range u.Password {
 		switch {
 		// func IsLower(r rune)bool
 		case unicode.IsLower(char):
@@ -128,17 +137,17 @@ func signUpUser(w http.ResponseWriter, r *http.Request) {
 
 	}
 
-	if 11 < len(password) && len(password) < 60 {
+	if 11 < len(u.Password) && len(u.Password) < 60 {
 		pswdLength = true
 	}
 	//fmt.Println("pswdLowercase:", pswdLowercase, "\npswdUppercase:", pswdUppercase, "\npswdNumber:", pswdNumber, "\npswdSpecial:", pswdSpecial, "\npswdLength:", pswdLength, "\npswdNoSpaces:", pswdNoSpaces, "\nnameAlphaNumeric:", isAlphaNumeric, "\nnameLength:", nameLength)
 	if !pswdLowercase || !pswdUppercase || !pswdNumber || !pswdSpecial || !pswdLength || !pswdNoSpaces || !isAlphaNumeric || !nameLength {
-		tpl.ExecuteTemplate(w, "sign-up.html", "wrong")
+		tpl.ExecuteTemplate(w, "sign-up.html", "please check username and password criteria")
 		return
 	}
 
 	stmt := "SELECT id FROM people where username = ?"
-	row := database.DB.QueryRow(stmt, username)
+	row := database.DB.QueryRow(stmt, u.Username)
 
 	var id string
 	err := row.Scan(&id)
@@ -148,12 +157,24 @@ func signUpUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	stmt = "SELECT id FROM people where email = ?"
+	row = database.DB.QueryRow(stmt, u.Username)
+
+	var userEmail string
+	err = row.Scan(&userEmail)
+	if err != sql.ErrNoRows {
+		fmt.Println("email is already taken. err", err)
+		tpl.ExecuteTemplate(w, "sign-up.html", "email already taken")
+		return
+	}
+
+
 	// create hash from password
 	var passwordHash []byte
 
-	// func GenerateFromPassword(password []byte, cost int)([]byte, error)
+	// func GenerateFromPassword(password []byte, cost int)([]byte, error) generate a password hash from an raw user password,
 
-	passwordHash, err = bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	passwordHash, err = bcrypt.GenerateFromPassword([]byte(u.Password), bcrypt.DefaultCost)
 	if err != nil {
 		fmt.Println("bcrypt err:", err)
 		tpl.ExecuteTemplate(w, "sign-up.html", "there is a problem registering account")
@@ -169,9 +190,8 @@ func signUpUser(w http.ResponseWriter, r *http.Request) {
 	}
 	defer insertStmt.Close()
 
-
 	var result sql.Result
-	result, err = insertStmt.Exec(username, email, passwordHash)
+	result, err = insertStmt.Exec(u.Username, u.Email, passwordHash)
 	rowsAff, _ := result.RowsAffected()
 	lastIns, _ := result.LastInsertId()
 	fmt.Println("rowsAff:", rowsAff)
@@ -180,56 +200,91 @@ func signUpUser(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		fmt.Println("error inserting new user")
 		tpl.ExecuteTemplate(w, "sing-up.html", "there was a problem registering account")
-		return 
+		return
+	} else {
+
+		fmt.Println("hash:", passwordHash)
+		fmt.Println("string(hash)", string(passwordHash))
+
+		//tpl.ExecuteTemplate(w, "homepage.html", "congrats, your account has been successfully created")
+		http.Redirect(w, r, "/login",302)
 	}
-
-	fmt.Println("hash:", passwordHash)
-	fmt.Println("string(hash)", string(passwordHash))
-
-	fmt.Fprint(w, "congrats, your account has been successfully created")
-
 }
 
 // fmt.Println("email:", email)
-// fmt.Println("username:", username)
+// fmt.Println("u.username:", u.username)
 // fmt.Println("password:", password)
 
 func loginUser(w http.ResponseWriter, r *http.Request) {
 
-	fmt.Println("*****loginuser is running********")
+	fmt.Println("*****loginUser is running********")
 
-	r.ParseForm()
-
-	username := r.FormValue("username")
-
-	if len(username) >= 2 && len(username) <= 8 {
-		fmt.Println("Username is too short")
-		tpl.ExecuteTemplate(w, "login.html", nil)
-		return
+	cookie, err := r.Cookie("session")
+	if err != nil {
+		id := uuid.NewV4()
+		//fmt.Println("cookie was not found")
+		cookie = &http.Cookie{
+			Name: "session",
+			Value: id.String(),
+			Secure: true, 
+			HttpOnly: true, 
+		}
+		http.SetCookie(w, cookie)
 	}
-
-	password := r.FormValue("password")
-
-	fmt.Println("username:", username)
-	fmt.Println("password:", password)
-
-}
-
-func homePage(w http.ResponseWriter, r *http.Request) {
-
-	tpl.ExecuteTemplate(w, "homepage.html", nil)
-}
-
-func getUser(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("cookie:",cookie)
 
 	var u User
 
-	u.username = r.FormValue("username")
-	u.password = r.FormValue("password")
-	u.email = r.FormValue("email")
+	r.ParseForm()
 
-	tpl.ExecuteTemplate(w, "login.html", nil)
+	u.Username = r.FormValue("username")
+	u.Password = r.FormValue("password")
+
+	fmt.Println("username:", u.Username)
+	fmt.Println("password:", u.Password)
+
+	// retrieve password from db to compare (hash) with user supplied password's hash
+	var passwordHash string
+	stmt := "SELECT passwordHash FROM people WHERE Username = ?"
+	row := database.DB.QueryRow(stmt, u.Username)
+	err = row.Scan(&passwordHash)
+	fmt.Println("hash from db:", passwordHash)
+	if err != nil {
+		fmt.Println("error selecting Hash in db by Username")
+		tpl.ExecuteTemplate(w, "login.html", "check username and password")
+		return
+	}
+	// func CompareHashAndPassword(hashedPassword, password []byte) error
+	err = bcrypt.CompareHashAndPassword([]byte(passwordHash), []byte(u.Password))
+	// returns nill on succcess
+	if err == nil {
+		//tpl.ExecuteTemplate(w, "homepage.html",  nil)
+		http.Redirect(w, r, "/homepage.html", 302)
+		return
+	}
+
+	fmt.Println("incorrect password")
+	tpl.ExecuteTemplate(w, "login.html", "check username and password")
+
 }
+
+
+func homePage(w http.ResponseWriter, r *http.Request) {
+	tpl.ExecuteTemplate(w, "homepage.html", nil)
+}
+
+func guestView(w http.ResponseWriter, r *http.Request) {
+	tpl.ExecuteTemplate(w, "guest.html", nil)
+}
+
+
+func logout(writer http.ResponseWriter, request *http.Request) {
+
+
+	http.Redirect(writer, request, "/", 302)
+}
+
+
 
 func handler(w http.ResponseWriter, r *http.Request) {
 	switch r.URL.Path {
@@ -243,15 +298,19 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		signUpUser(w, r)
 	case "/homepage.html":
 		homePage(w, r)
+	case "/guest.html":
+		guestView(w, r)
 	}
 }
 
 func main() {
 	database.Connect()
-   http.HandleFunc("/", handler)
+	http.HandleFunc("/", handler)
+	
 	fmt.Println("Starting the server on :8080...")
 	err := http.ListenAndServe(":8080", nil)
 	if err != nil {
-      panic(err)
-    }
+		panic(err)
+	}
+
 }
