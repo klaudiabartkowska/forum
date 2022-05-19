@@ -107,7 +107,7 @@ func showSessions() {
 func index(w http.ResponseWriter, req *http.Request) {
 	// U := getUser(w, req)
 	var u User
-	tpl, err := template.ParseFiles("../templates/homepage.html")
+	tpl, err := template.ParseFiles("templates/homepage.html")
 	if err != nil {
 		log.Println(err.Error(), u, "")
 		return
@@ -172,7 +172,7 @@ func signup(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	showSessions() // for demonstration purposes
-	tpl, err := template.ParseFiles("../templates/signup.html")
+	tpl, err := template.ParseFiles("templates/signup.html")
 	if err != nil {
 		log.Println(err.Error(), u, "")
 		return
@@ -220,7 +220,7 @@ func login(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	showSessions() // for demonstration purposes
-	tpl, err := template.ParseFiles("../templates/login.html")
+	tpl, err := template.ParseFiles("templates/login.html")
 	if err != nil {
 		log.Println(err.Error(), u, "")
 		return
