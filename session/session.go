@@ -41,29 +41,29 @@ func init() {
 	http.ListenAndServe(":8080", nil)
 }
 
-// func getUser(w http.ResponseWriter, req *http.Request) User {
-// 	// get cookie
-// 	c, err := req.Cookie("session")
-// 	if err != nil {
-// 		sID := uuid.NewV4()
-// 		c = &http.Cookie{
-// 			Name:  "session",
-// 			Value: sID.String(),
-// 		}
+func getUser(w http.ResponseWriter, req *http.Request) User {
+	// get cookie
+	c, err := req.Cookie("session")
+	if err != nil {
+		sID := uuid.NewV4()
+		c = &http.Cookie{
+			Name:  "session",
+			Value: sID.String(),
+		}
 
-// 	}
-// 	c.MaxAge = sessionLength
-// http.SetCookie(w, c)
-// 	var u User
-// 	//if the user exists already, get user
-// 	var u User
-// 	if s, ok := dbSessions[c.Value]; ok {
-// 		s.lastActivity = time.Now()
-// 		dbSessions[c.Value] = s
-// 		u = dbUsers[s.un]
-// 	}
-// 	return u
-// }
+	}
+	c.MaxAge = sessionLength
+	http.SetCookie(w, c)
+	var u User
+	// if the user exists already, get user
+	var u User
+	if s, ok := dbSessions[c.Value]; ok {
+		s.lastActivity = time.Now()
+		dbSessions[c.Value] = s
+		u = dbUsers[s.un]
+	}
+	return u
+}
 
 func alreadyLoggedIn(w http.ResponseWriter, req *http.Request) bool {
 	c, err := req.Cookie("session")
