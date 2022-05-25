@@ -54,7 +54,7 @@ func getUser(w http.ResponseWriter, req *http.Request) User {
 	}
 	c.MaxAge = sessionLength
 	http.SetCookie(w, c)
-	var u User
+	//var u User
 	// if the user exists already, get user
 	var u User
 	if s, ok := dbSessions[c.Value]; ok {

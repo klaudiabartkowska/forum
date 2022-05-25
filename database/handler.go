@@ -167,9 +167,9 @@ func (data *Forum) signUpUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	sessionID := uuid.NewV4()
-	
+
 	data.CreateUser(User{
-		Uuid: sessionID.String(),
+		Uuid:     sessionID.String(),
 		Username: user.Username,
 		Email:    user.Email,
 		Password: string(passwordHash),
@@ -177,9 +177,8 @@ func (data *Forum) signUpUser(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		tpl.ExecuteTemplate(w, "sign-up.html", "there was a problem registering account")
+		//defer data.Close()
 		return
-
-	// 	//defer .Close()
 
 	} else {
 		http.Redirect(w, r, "/login", 302)
@@ -192,24 +191,24 @@ func (data *Forum) signUpUser(w http.ResponseWriter, r *http.Request) {
 
 func (data *Forum) loginUser(w http.ResponseWriter, r *http.Request) {
 
- var cookie *http.Cookie
+	var cookie *http.Cookie
 
 	fmt.Println("*****loginUser is running********")
-	
+
 	var user User
-	
+
 	r.ParseForm()
 
 	user.Username = r.FormValue("username")
 	user.Password = r.FormValue("password")
-	
+
 	fmt.Println("username:", user.Username)
 	fmt.Println("password:", user.Password)
-	
+
 	// retrieve password from db to compare (hash) with user supplied password's hash
 	var passwordHash string
-	
-	row := DB.QueryRow("SELECT password FROM people WHERE Username = ?", user.Username)
+
+	row := data.DB.QueryRow("SELECT password FROM people WHERE Username = ?", user.Username)
 	err := row.Scan(&passwordHash)
 	fmt.Println("hash from db:", passwordHash)
 	if err != nil {
@@ -226,30 +225,26 @@ func (data *Forum) loginUser(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/homepage.html", 302)
 		return
 	}
-	
+
 	fmt.Println("incorrect password")
 	tpl.ExecuteTemplate(w, "login.html", "check username and password")
-	
-		cookie, err = r.Cookie("session")
-		if err != nil {
-			id := uuid.NewV4()
-			//fmt.Println("cookie was not found")
-			cookie = &http.Cookie{
-				Name:     "session",
-				Value:    id.String(),
-				Secure:   true,
-				HttpOnly: true,
-			}
-			http.SetCookie(w, cookie)
+
+	cookie, err = r.Cookie("session")
+	if err != nil {
+		id := uuid.NewV4()
+		//fmt.Println("cookie was not found")
+		cookie = &http.Cookie{
+			Name:     "session",
+			Value:    id.String(),
+			Secure:   true,
+			HttpOnly: true,
 		}
-	
-	
+		http.SetCookie(w, cookie)
+	}
+
 }
 
 func (data *Forum) homePage(w http.ResponseWriter, r *http.Request) {
-
-
-
 
 	tpl.ExecuteTemplate(w, "homepage.html", nil)
 }
